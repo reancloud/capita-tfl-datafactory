@@ -1,0 +1,13 @@
+{
+	"name": "hcp_download_data_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "http_rest_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

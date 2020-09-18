@@ -1,0 +1,158 @@
+{
+	"name": "az_sql_hcp_data",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_sql_ls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"sql_account_url": "test-capitatfl-sql-server.database.windows.net",
+				"sql_database_name": "test-capitatfl-sql-db",
+				"sql_username": "4dm1n",
+				"sql_password": "capita@2020"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ID",
+				"type": "uniqueidentifier"
+			},
+			{
+				"name": "BatchID",
+				"type": "uniqueidentifier"
+			},
+			{
+				"name": "ObjectFullPath",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Operation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Version",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ObjectPath",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Type",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ObjectSize",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Retention",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Hold",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Shred",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Owner",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Index",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Hash",
+				"type": "nvarchar"
+			},
+			{
+				"name": "AzureHash",
+				"type": "nvarchar"
+			},
+			{
+				"name": "IngestTime",
+				"type": "nvarchar"
+			},
+			{
+				"name": "UpdateTime",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Namespace",
+				"type": "nvarchar"
+			},
+			{
+				"name": "CustomMetadataExists",
+				"type": "nvarchar"
+			},
+			{
+				"name": "CustomMetadata",
+				"type": "xml"
+			},
+			{
+				"name": "CustomMetadataAnnotation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MD5",
+				"type": "nvarchar"
+			},
+			{
+				"name": "LeaseId",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Container",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ETag",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Status",
+				"type": "nvarchar"
+			},
+			{
+				"name": "RetryCount",
+				"type": "smallint",
+				"precision": 5
+			},
+			{
+				"name": "ErrorAtStage",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ErrorInformation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "IsObjectCleanedUp",
+				"type": "bit"
+			},
+			{
+				"name": "CreatedDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "ModifiedDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "tblhcpdata"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

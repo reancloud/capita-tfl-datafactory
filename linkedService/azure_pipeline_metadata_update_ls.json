@@ -1,0 +1,12 @@
+{
+	"name": "azure_pipeline_metadata_update_ls",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureFunction",
+		"typeProperties": {
+			"functionAppUrl": "https://test-capitatfl-pipelinemetadataupdate-func.azurewebsites.net",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIlRFU1QtQ0FQSVRBVEZMLURGXzM5OTc2YWJiLTA1YmEtNDQzMi1iNjJmLTA4M2M3ZGEzNjQ0NSINCn0="
+		}
+	}
+}

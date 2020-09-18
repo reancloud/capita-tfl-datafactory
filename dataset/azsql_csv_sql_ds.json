@@ -1,0 +1,55 @@
+{
+	"name": "azsql_csv_sql_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_sql_ls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"sql_account_url": "test-capitatfl-sql-server.database.windows.net",
+				"sql_database_name": "test-capitatfl-sql-db",
+				"sql_username": "4dm1n",
+				"sql_password": "capita@2020"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ID",
+				"type": "uniqueidentifier"
+			},
+			{
+				"name": "IngestStartDateTime",
+				"type": "nvarchar"
+			},
+			{
+				"name": "IngestEndDateTime",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Namespace",
+				"type": "nvarchar"
+			},
+			{
+				"name": "RecordsCount",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Status",
+				"type": "nvarchar"
+			},
+			{
+				"name": "CreatedDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "tblhcpqueries"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,23 @@
+{
+	"name": "az_sql_hcp_delta_purge_data",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_sql_ls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"sql_account_url": "test-capitatfl-sql-server.database.windows.net",
+				"sql_database_name": "test-capitatfl-sql-db",
+				"sql_username": "4dm1n",
+				"sql_password": "capita@2020"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "tblPurgeRecords"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,163 @@
+{
+	"name": "Main",
+	"properties": {
+		"activities": [
+			{
+				"name": "until_records_processed",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@lessOrEquals(activity('get_records_from_initialstatus').output.firstRow.recordsCount,0)",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "processor_hcp_pipe",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "get_records_from_initialstatus",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "processor_hcp_pipe",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "processor_sql_cosmos_pipe",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "processor_azure_fillprops_pipe",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "processor_sql_cosmos_pipe",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "processor_azure_pipe",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "processor_hcp_pipe",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "processor_azure_pipe",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "processor_azure_fillprops_pipe",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "processor_azure_pipe",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "processor_azure_fillprops_pipe",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "get_records_from_initialstatus",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsWithInitialStatus]",
+									"storedProcedureParameters": {
+										"count": {
+											"type": "Int32",
+											"value": {
+												"value": "@pipeline().parameters.CountOfRecordsToProcess",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00"
+								},
+								"dataset": {
+									"referenceName": "az_sql_hcp_data",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "cleanup_pipe",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "processor_sql_cosmos_pipe",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "cleanup_pipe",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"CountofRecordsToProcess": {
+				"type": "int",
+				"defaultValue": 1
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

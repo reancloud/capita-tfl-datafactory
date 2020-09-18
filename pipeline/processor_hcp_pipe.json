@@ -1,0 +1,424 @@
+{
+	"name": "processor_hcp_pipe",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_objects_to_process_lkup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsByStatus]",
+						"storedProcedureParameters": {
+							"baseURL": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.baseURL",
+									"type": "Expression"
+								}
+							},
+							"currentStatus": {
+								"type": "String",
+								"value": "ObjectStagingInProgress..."
+							},
+							"previousStatus": {
+								"type": "String",
+								"value": null
+							}
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "azsql_csv_sql_ds",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "foreach_object",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_objects_to_process_lkup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_objects_to_process_lkup').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "download_object",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AvroSource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "GET",
+										"additionalHeaders": "Authorization: HCP ZGF0YWFjY2Vzc3VzZXIwMQ==:2b1130feb9e66aed8403dea732c16492",
+										"requestTimeout": ""
+									}
+								},
+								"sink": {
+									"type": "AvroSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "AvroWriteSettings",
+										"quoteAllText": true
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "hcp_object_download_ds",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": {
+											"value": "@item().ObjectPath",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "az_object_upload_stg_ds",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": {
+											"value": "@item().ObjectPath",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "update_status_objectstaged",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "check_custommetadata_exists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_UpdateHcpData_Status]",
+								"storedProcedureParameters": {
+									"id": {
+										"value": {
+											"value": "@item().Id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"status": {
+										"value": "ObjectStaged",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "check_custommetadata_exists",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "download_object",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@bool(equals(item().CustomMetadataExists,'True'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "download_metadata_object",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "AvroSource",
+												"storeSettings": {
+													"type": "HttpReadSettings",
+													"requestMethod": "GET",
+													"additionalHeaders": "Authorization: HCP ZGF0YWFjY2Vzc3VzZXIwMQ==:2b1130feb9e66aed8403dea732c16492",
+													"requestTimeout": ""
+												}
+											},
+											"sink": {
+												"type": "AvroSink",
+												"storeSettings": {
+													"type": "AzureBlobStorageWriteSettings"
+												},
+												"formatSettings": {
+													"type": "AvroWriteSettings",
+													"quoteAllText": true
+												}
+											},
+											"enableStaging": false
+										},
+										"inputs": [
+											{
+												"referenceName": "hcp_metadata_download_ls",
+												"type": "DatasetReference",
+												"parameters": {
+													"relativeURL": {
+														"value": "@concat(item().ObjectPath,'?type=custom-metadata&annotation=',item().CustomMetadataAnnotation)",
+														"type": "Expression"
+													}
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "az_object_upload_stg_ds",
+												"type": "DatasetReference",
+												"parameters": {
+													"relativeURL": "@concat('metadata/',item().ObjectPath,'.txt')"
+												}
+											}
+										]
+									},
+									{
+										"name": "update_status_metadata_downloaded",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "download_metadata_object",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[dbo].[USP_UpdateHcpData_Status]",
+											"storedProcedureParameters": {
+												"id": {
+													"value": {
+														"value": "@item().Id",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"status": {
+													"value": "Metadata Downloaded",
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "az_sql_ls",
+											"type": "LinkedServiceReference"
+										}
+									},
+									{
+										"name": "update_error_download_metadata",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [
+											{
+												"activity": "download_metadata_object",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "[dbo].[USP_Insert_ErrorInformation]",
+											"storedProcedureParameters": {
+												"errorAtStage": {
+													"value": "download metadata object",
+													"type": "String"
+												},
+												"errorInPipeline": {
+													"value": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"errorMessage": {
+													"value": {
+														"value": "@activity('download_metadata_object').error.message",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"referenceId": {
+													"value": {
+														"value": "@item().id",
+														"type": "Expression"
+													},
+													"type": "Guid"
+												},
+												"referenceTable": {
+													"value": {
+														"value": "@pipeline().parameters.referencetable",
+														"type": "Expression"
+													},
+													"type": "String"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "az_sql_ls",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "update_error_download_object",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "download_object",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_Insert_ErrorInformation]",
+								"storedProcedureParameters": {
+									"errorAtStage": {
+										"value": "download object",
+										"type": "String"
+									},
+									"errorInPipeline": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"errorMessage": {
+										"value": {
+											"value": "@activity('download_object').error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"referenceId": {
+										"value": {
+											"value": "@item().id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"referenceTable": {
+										"value": {
+											"value": "@pipeline().parameters.referencetable",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"baseURL": {
+				"type": "string",
+				"defaultValue": "https://ns01.tenant01.coe-hcp01.hitachivantara.com/rest/"
+			},
+			"azurestagecontainer": {
+				"type": "string",
+				"defaultValue": "hcpstage"
+			},
+			"referencetable": {
+				"type": "string",
+				"defaultValue": "tblhcpdata"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,238 @@
+{
+	"name": "processor_azure_pipe",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_objects_to_process_lkup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsByStatus]",
+						"storedProcedureParameters": {
+							"baseURL": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.baseURL",
+									"type": "Expression"
+								}
+							},
+							"currentStatus": {
+								"type": "String",
+								"value": "ObjectLoadingInProgress...."
+							},
+							"previousStatus": {
+								"type": "String",
+								"value": "ObjectStaged"
+							}
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "azsql_csv_sql_ds",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "foreach_object",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_objects_to_process_lkup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_objects_to_process_lkup').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "copy_objects_stage_main",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AvroSource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true
+									}
+								},
+								"sink": {
+									"type": "AvroSink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									},
+									"formatSettings": {
+										"type": "AvroWriteSettings",
+										"quoteAllText": true
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "az_object_upload_stg_ds",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": "@item().ObjectPath"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "az_object_upload_prod_ds",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": "@item().ObjectPath"
+									}
+								}
+							]
+						},
+						{
+							"name": "update_status_objectloaded",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "copy_objects_stage_main",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_UpdateHcpData_Status]",
+								"storedProcedureParameters": {
+									"id": {
+										"value": {
+											"value": "@item().Id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"status": {
+										"value": "ObjectLoaded",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "update_error_copy_objects_stage_main",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "copy_objects_stage_main",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_Insert_ErrorInformation]",
+								"storedProcedureParameters": {
+									"errorAtStage": {
+										"value": "fill object properties",
+										"type": "String"
+									},
+									"errorInPipeline": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"errorMessage": {
+										"value": {
+											"value": "@activity('copy_objects_stage_main').error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"referenceId": {
+										"value": {
+											"value": "@item().id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"referenceTable": {
+										"value": {
+											"value": "@pipeline().parameters.referencetable",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"baseURL": {
+				"type": "string",
+				"defaultValue": "https://ns01.tenant01.coe-hcp01.hitachivantara.com/rest/"
+			},
+			"azurestagecontainer": {
+				"type": "string",
+				"defaultValue": "hcpstage"
+			},
+			"referencetable": {
+				"type": "string",
+				"defaultValue": "tblhcpdata"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

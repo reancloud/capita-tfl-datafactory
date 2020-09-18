@@ -1,0 +1,21 @@
+{
+	"name": "az_sftp_delta_purge_files_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_log_strg_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"container": "delta-purge-records"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}

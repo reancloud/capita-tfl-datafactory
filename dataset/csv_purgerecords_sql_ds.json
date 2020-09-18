@@ -1,0 +1,40 @@
+{
+	"name": "csv_purgerecords_sql_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_strg_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"container": "purgedrecords"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "EvidentialRecordID",
+				"type": "String"
+			},
+			{
+				"name": "EvidenceStoreID",
+				"type": "String"
+			},
+			{
+				"name": "RetentionDate",
+				"type": "String"
+			},
+			{
+				"name": "DeletionDate",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

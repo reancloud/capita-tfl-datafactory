@@ -1,0 +1,17 @@
+{
+	"name": "http_rest_ls",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "RestService",
+		"typeProperties": {
+			"url": "https://tenant01.coe-hcp01.hitachivantara.com/query",
+			"enableServerCertificateValidation": false,
+			"authenticationType": "Anonymous"
+		},
+		"connectVia": {
+			"referenceName": "hcp-Ir",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

@@ -1,0 +1,27 @@
+{
+	"name": "schedule_sftp_get_files_trigger",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "delta_purgerecords_pipe",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"referenceTable": "tblPurgeRecords"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Hour",
+				"interval": 1,
+				"startTime": "2020-06-30T16:31:00.000Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}

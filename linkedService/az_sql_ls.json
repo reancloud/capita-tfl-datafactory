@@ -1,0 +1,29 @@
+{
+	"name": "az_sql_ls",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"parameters": {
+			"sql_account_url": {
+				"type": "String",
+				"defaultValue": "test-capitatfl-sql-server.database.windows.net"
+			},
+			"sql_database_name": {
+				"type": "String",
+				"defaultValue": "test-capitatfl-sql-db"
+			},
+			"sql_username": {
+				"type": "String",
+				"defaultValue": "4dm1n"
+			},
+			"sql_password": {
+				"type": "String",
+				"defaultValue": "capita@2020"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=@{linkedService().sql_account_url};Initial Catalog=@{linkedService().sql_database_name};User ID=@{linkedService().sql_username};Password=@{linkedService().sql_password}"
+		}
+	}
+}

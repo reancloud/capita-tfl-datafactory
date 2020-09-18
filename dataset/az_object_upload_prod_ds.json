@@ -1,0 +1,27 @@
+{
+	"name": "az_object_upload_prod_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_strg_ls",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"relativeURL": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "Avro",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@dataset().relativeURL",
+					"type": "Expression"
+				},
+				"container": "evidential"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

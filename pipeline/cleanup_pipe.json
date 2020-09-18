@@ -1,0 +1,172 @@
+{
+	"name": "cleanup_pipe",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_objects_cleanup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsToCleanUp]",
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "az_sql_hcp_data",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "foreach_object",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_objects_cleanup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_objects_cleanup').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "check_if_custommetadata_exists",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@bool(equals(item().CustomMetadataExists,'True'))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "delete_metadata_from_stage",
+										"type": "Delete",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "7.00:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"dataset": {
+												"referenceName": "az_object_upload_stg_ds",
+												"type": "DatasetReference",
+												"parameters": {
+													"relativeURL": {
+														"value": "@concat('metadata\\',item().ObjectPath,'.txt')",
+														"type": "Expression"
+													}
+												}
+											},
+											"enableLogging": false,
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "delete_staged_object",
+							"type": "Delete",
+							"dependsOn": [
+								{
+									"activity": "check_if_custommetadata_exists",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "az_object_upload_stg_ds",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": {
+											"value": "@item().ObjectPath",
+											"type": "Expression"
+										}
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true
+								}
+							}
+						},
+						{
+							"name": "update_cleanup_flag",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "delete_staged_object",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_UpdateCleanUp_FlagToTrue]",
+								"storedProcedureParameters": {
+									"id": {
+										"value": {
+											"value": "@item().id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

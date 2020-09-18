@@ -1,0 +1,28 @@
+{
+	"name": "sftp_csv_purged_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sftp_capita_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "SftpLocation",
+				"folderPath": "/incoming/pipeline_purge_input"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "HCPID,RetentionDate,HoldStatus",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

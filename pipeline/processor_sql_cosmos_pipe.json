@@ -1,0 +1,331 @@
+{
+	"name": "processor_sql_cosmos_pipe",
+	"properties": {
+		"activities": [
+			{
+				"name": "update_error_copy_data_to_cosmos",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "copy_data_to_cosmos",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[USP_Insert_ErrorInformation]",
+					"storedProcedureParameters": {
+						"errorAtStage": {
+							"value": "download object",
+							"type": "String"
+						},
+						"errorInPipeline": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"errorMessage": {
+							"value": {
+								"value": "@activity('copy_data_to_cosmos').error.message",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"referenceId": {
+							"type": "Guid"
+						},
+						"referenceTable": {
+							"value": {
+								"value": "@pipeline().parameters.referencetable",
+								"type": "Expression"
+							},
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "az_sql_ls",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "save_status_of_processor",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "copy_data_to_cosmos",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[USP_UpdateProcessor_Pipe_Status]"
+				},
+				"linkedServiceName": {
+					"referenceName": "az_sql_ls",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "copy_data_to_cosmos",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsToBeProcessedForCosmos]",
+						"queryTimeout": "02:00:00"
+					},
+					"sink": {
+						"type": "CosmosDbSqlApiSink",
+						"writeBehavior": "upsert",
+						"disableMetricsCollection": false
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "ID",
+									"type": "Guid"
+								},
+								"sink": {
+									"path": "$['id']"
+								}
+							},
+							{
+								"source": {
+									"name": "Application",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['application']"
+								}
+							},
+							{
+								"source": {
+									"name": "FilePath",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['FilePath']"
+								}
+							},
+							{
+								"source": {
+									"name": "SnapshotPath",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['SnapshotPath']"
+								}
+							},
+							{
+								"source": {
+									"name": "IsSnapshot",
+									"type": "Boolean"
+								},
+								"sink": {
+									"path": "$['IsSnapshot']"
+								}
+							},
+							{
+								"source": {
+									"name": "Version",
+									"type": "Int64"
+								},
+								"sink": {
+									"path": "$['Version']"
+								}
+							},
+							{
+								"source": {
+									"name": "Hold",
+									"type": "Boolean"
+								},
+								"sink": {
+									"path": "$['SystemMetadata']['Hold']"
+								}
+							},
+							{
+								"source": {
+									"name": "Index",
+									"type": "Boolean"
+								},
+								"sink": {
+									"path": "$['SystemMetadata']['Index']"
+								}
+							},
+							{
+								"source": {
+									"name": "Shred",
+									"type": "Boolean"
+								},
+								"sink": {
+									"path": "$['SystemMetadata']['Shred']"
+								}
+							},
+							{
+								"source": {
+									"name": "Retention",
+									"type": "Int64"
+								},
+								"sink": {
+									"path": "$['SystemMetadata']['Retention']"
+								}
+							},
+							{
+								"source": {
+									"name": "CustomMetadata",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['CustomMetadata']"
+								}
+							},
+							{
+								"source": {
+									"name": "DocumentSize",
+									"type": "Int32"
+								},
+								"sink": {
+									"path": "$['DocumentSize']"
+								}
+							},
+							{
+								"source": {
+									"name": "LastModifiedDate",
+									"type": "Int32"
+								},
+								"sink": {
+									"path": "$['LastModifiedDate']"
+								}
+							},
+							{
+								"source": {
+									"name": "Status",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['Status']"
+								}
+							},
+							{
+								"source": {
+									"name": "QueueRequestType",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['QueueRequestType']"
+								}
+							},
+							{
+								"source": {
+									"name": "ContentMD5",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['ContentMD5']"
+								}
+							},
+							{
+								"source": {
+									"name": "LeaseId",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['LeaseId']"
+								}
+							},
+							{
+								"source": {
+									"name": "CreatedDate",
+									"type": "Int32"
+								},
+								"sink": {
+									"path": "$['CreatedDate']"
+								}
+							},
+							{
+								"source": {
+									"name": "ETag",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['ETag']"
+								}
+							},
+							{
+								"source": {
+									"name": "FileName",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['FileName']"
+								}
+							},
+							{
+								"source": {
+									"name": "FileType",
+									"type": "String"
+								},
+								"sink": {
+									"path": "$['FileType']"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "az_sql_hcp_data",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "az_metadata_cosmos_ds",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"parameters": {
+			"referencetable": {
+				"type": "string",
+				"defaultValue": "tblhcpdata"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

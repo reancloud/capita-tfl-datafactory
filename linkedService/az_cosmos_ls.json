@@ -1,0 +1,25 @@
+{
+	"name": "az_cosmos_ls",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"parameters": {
+			"cosmos_account_url": {
+				"type": "String",
+				"defaultValue": "https://test-capitatfl-evidentialcosmosdb.documents.azure.com:443/"
+			},
+			"cosmos_account_password": {
+				"type": "String",
+				"defaultValue": "eUNS4S8vff5KCaESa8RdqsxbPktB8vRCljNUMhodp8PRZRircDtOBMgVAkZlI3ahDzGqUk8UtMbtItUs1USjgQ=="
+			},
+			"cosmos_database_name": {
+				"type": "String",
+				"defaultValue": "test-capitatfl-metadatastore"
+			}
+		},
+		"annotations": [],
+		"type": "CosmosDb",
+		"typeProperties": {
+			"connectionString": "AccountEndpoint=@{linkedService().cosmos_account_url};Database=@{linkedService().cosmos_database_name};AccountKey=@{linkedService().cosmos_account_password}"
+		}
+	}
+}

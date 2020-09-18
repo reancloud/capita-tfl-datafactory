@@ -1,0 +1,285 @@
+{
+	"name": "processor_azure_fillprops_pipe",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_objects_to_process_lkup",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[USP_Get_ObjectsByStatus]",
+						"storedProcedureParameters": {
+							"baseURL": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.baseURL",
+									"type": "Expression"
+								}
+							},
+							"currentStatus": {
+								"type": "String",
+								"value": "IntegrityCheckInProgress... "
+							},
+							"previousStatus": {
+								"type": "String",
+								"value": "ObjectLoaded"
+							}
+						},
+						"queryTimeout": "02:00:00"
+					},
+					"dataset": {
+						"referenceName": "azsql_csv_sql_ds",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "foreach_object",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_objects_to_process_lkup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_objects_to_process_lkup').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "fill_object_properties",
+							"type": "AzureFunctionActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"functionName": "hcpmetadataupdate",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"body": {
+									"value": "@concat('{\n\"filepath\": \"',item().Container,'/',item().ObjectPath,'\",\n\"customMetadataExists\":\"',item().CustomMetadataExists,'\"\n}')",
+									"type": "Expression"
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "azure_pipeline_metadata_update_ls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "update_metadata_and_integrity_check",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "fill_object_properties",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_Update_Metadata]",
+								"storedProcedureParameters": {
+									"azureHash": {
+										"value": {
+											"value": "@activity('fill_object_properties').output.sha256",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"customMetadata": {
+										"value": {
+											"value": "@activity('fill_object_properties').output.customMetadata",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"eTag": {
+										"value": {
+											"value": "@activity('fill_object_properties').output.eTag",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"id": {
+										"value": {
+											"value": "@item().Id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"MD5": {
+										"value": {
+											"value": "@activity('fill_object_properties').output.contentMD5",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "update_error_fill_object_props",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "fill_object_properties",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_Insert_ErrorInformation]",
+								"storedProcedureParameters": {
+									"errorAtStage": {
+										"value": "fill object properties",
+										"type": "String"
+									},
+									"errorInPipeline": {
+										"value": {
+											"value": "@pipeline().Pipeline",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"errorMessage": {
+										"value": {
+											"value": "@activity('fill_object_properties').error.message",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"referenceId": {
+										"value": {
+											"value": "@item().id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"referenceTable": {
+										"value": {
+											"value": "@pipeline().parameters.referencetable",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "update_inventory_db",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "update_metadata_and_integrity_check",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[USP_DF_Save_ObjectInventoryInfo]",
+								"storedProcedureParameters": {
+									"id": {
+										"value": {
+											"value": "@item().Id",
+											"type": "Expression"
+										},
+										"type": "Guid"
+									},
+									"operation": {
+										"value": "Create",
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "az_sql_ls",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"sql_account_url": "qa-capitatfl-sql-server.database.windows.net",
+									"sql_database_name": "qa-capitatfl-sql-db",
+									"sql_username": "4dm1n",
+									"sql_password": "capita@2020"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"baseURL": {
+				"type": "string",
+				"defaultValue": "https://ns01.tenant01.coe-hcp01.hitachivantara.com/rest/"
+			},
+			"azurestagecontainer": {
+				"type": "string",
+				"defaultValue": "hcpstage"
+			},
+			"referencetable": {
+				"type": "string",
+				"defaultValue": "tblhcpdata"
+			}
+		},
+		"annotations": []
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

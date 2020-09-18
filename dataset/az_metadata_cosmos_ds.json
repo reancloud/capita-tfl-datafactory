@@ -1,0 +1,87 @@
+{
+	"name": "az_metadata_cosmos_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "az_cosmos_ls",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"cosmos_account_url": "https://test-capitatfl-evidentialcosmosdb.documents.azure.com:443/",
+				"cosmos_account_password": "eUNS4S8vff5KCaESa8RdqsxbPktB8vRCljNUMhodp8PRZRircDtOBMgVAkZlI3ahDzGqUk8UtMbtItUs1USjgQ==",
+				"cosmos_database_name": "test-capitatfl-metadatastore"
+			}
+		},
+		"annotations": [],
+		"type": "CosmosDbSqlApiCollection",
+		"schema": {
+			"type": "object",
+			"properties": {
+				"application": {
+					"type": "string"
+				},
+				"FilePath": {
+					"type": "string"
+				},
+				"SnapshotPath": {
+					"type": "string"
+				},
+				"IsSnapshot": {
+					"type": "boolean"
+				},
+				"Version": {
+					"type": "string"
+				},
+				"SystemMetadata": {
+					"type": "object",
+					"properties": {
+						"Hold": {
+							"type": "boolean"
+						},
+						"Index": {
+							"type": "boolean"
+						},
+						"Shred": {
+							"type": "boolean"
+						},
+						"Retention": {
+							"type": "integer"
+						}
+					}
+				},
+				"CustomMetadata": {
+					"type": "null"
+				},
+				"DocumentSize": {
+					"type": "integer"
+				},
+				"ClientId": {
+					"type": "string"
+				},
+				"LastModifiedDate": {
+					"type": "integer"
+				},
+				"Status": {
+					"type": "string"
+				},
+				"QueueRequestType": {
+					"type": "string"
+				},
+				"ContentMD5": {
+					"type": "string"
+				},
+				"LeaseId": {
+					"type": "string"
+				},
+				"CreatedDate": {
+					"type": "integer"
+				},
+				"ETag": {
+					"type": "string"
+				}
+			}
+		},
+		"typeProperties": {
+			"collectionName": "metadata"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
